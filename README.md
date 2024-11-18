@@ -1,25 +1,22 @@
-# Image_Segmentation_Femur_Bone
+# Image Segmentation of Femur Bone
 Final Project of Bachelor of Engineering at K.N.Toosi University of Technology.
 
 The objective of this project was to segment the femur bone from radiographic images. Initially, there was insufficient data available to employ machine learning techniques. Consequently, we endeavored to design an algorithm to detect the femur bone's edges within its entire surrounding environment using only a few sample images. Subsequently, we gained access to a larger dataset and proceeded to train a machine learning model.
 
+---
 
-
-**Classic Method**
+## Classic Method
 
 In this method, femur extraction was performed in three stages:
-1. Detecting the circle
-2. Identifying the femur shaft
-3. Locating the femoral neck and trochanters
+1. **Detecting the Circle**
+2. **Identifying the Femur Shaft**
+3. **Locating the Femoral Neck and Trochanters**
 
 First, using a neural network, we cropped the region containing the femur from the entire image. Then, we cropped the area containing the femoral head using a U-Net model. A total of 570 labeled images were used for training.
 
-The U-Net model used in this step resized the images to 512x512 pixels, which distorted the original aspect ratio and made it harder to detect circular shapes in the femur. To avoid this issue, we first added black padding to the image edges to make them square. This approach preserved the aspect ratio during resizing, simplifying circle detection. The output of this network was as follows.
+The U-Net model used in this step resized the images to 512x512 pixels, which distorted the original aspect ratio and made it harder to detect circular shapes in the femur. To avoid this issue, we first added black padding to the image edges to make them square. This approach preserved the aspect ratio during resizing, simplifying circle detection. The output of this network was as follows:
 
-
-
-![shape_1](assetts/shape_1.png)
-
+![Initial U-Net Output with Aspect Ratio Preservation](assetts/shape_1.png)
 
 Using the Hough Transform, we isolated the femoral head circle. The parameters for the Hough Transform were set as follows:
 - `dp = 2`
@@ -29,110 +26,53 @@ Using the Hough Transform, we isolated the femoral head circle. The parameters f
 
 The minimum radius for circle detection was set to one-third of the number of columns in the femoral head region, and the maximum radius was set to two-thirds of the number of columns in this region.
 
+![Circle Detection Using Hough Transform](assetts/shape_2.png)
 
-![shape_2](assetts/shape_2.png)
+---
 
+### Edge Detection for the Femur Shaft
+We aimed to identify the edge points of the femur shaft. Initially, we selected points in each row based on intensity differences with adjacent pixels, but this approach was not always reliable. To improve it, we refined the method by selecting the top four pixels with the highest intensity differences in every tenth row.
 
-In the next step, we aimed to identify the edge points of the femur shaft. It seemed feasible to locate the left edge by selecting a point in each row that had the maximum intensity difference with the pixel directly to its left (similarly, to locate the right edge, we could select the point with the greatest intensity difference compared to the pixel to its right). However, this approach sometimes yielded undesirable points in certain rows.
+![Selected Edge Points](assetts/shape_3.png)
 
-To address this, we refined the edge detection method: for the left edge of the shaft, in every tenth row, we initially selected the four pixels with the highest positive intensity difference compared to their neighboring left pixels (brighter than the pixel on their left). Similarly, for the right edge, in every tenth row, we selected the four pixels with the highest negative intensity difference with their left neighbors (darker than the pixel on their left).
+We then used an error function to choose the optimal points in each row, calculating cumulative errors and refining the selection to minimize outliers.
 
+![Filtered and Refined Edge Points](assetts/shape_4.png)
 
-![shape_3](assetts/shape_3.png)
+Outliers were removed by grouping points into clusters, computing average positions, and using a best-fit line as a reference to filter out unwanted points.
 
+![Final Edge Detection with Outlier Removal](assetts/shape_7.png)
 
-To select the optimal point in each row, we defined an error function.
+---
 
-Using this error function, we first calculated the cumulative error for each of the four points in the first row with respect to all points in the subsequent rows. The point in the first row with the lowest cumulative error was selected as the shaft edge for that row. Then, in each subsequent row, we calculated the error function for each of the four points relative to the chosen point in the preceding row. The point with the minimum error value was selected in each row.
+### Contour Following
+We implemented a contour-following algorithm to trace the femur's edge. Starting from a known point on the right edge, the algorithm used pixel brightness differences to select the next point along the edge.
 
-Despite these selections, some undesired points remained among the detected points.
+![Contour Following Schematic](assetts/shape_5.png)
+![Contour Following Implementation](assetts/shape_6.png)
 
+Different filters were applied based on the direction of the edge, allowing accurate tracing of the femur shaft and upper femur contours.
 
+![Edge Completion Using Contour Following](assetts/shape_8.png)
 
-![shape_4](assetts/shape_4.png)
+To detect the upper edge, a rectangular region adjacent to the femoral head was analyzed to identify boundary points.
 
+![Upper Edge Detection Region](assetts/shape_9.png)
 
+The algorithm included stopping conditions, such as reaching the bottom edge of the femoral head region or the perimeter of the femoral head circle.
 
-To remove the undesired points, we divided the points into five groups. For each group, we determined a representative point with row and column values equal to the average row and column positions of all points in that group. We then calculated the best-fit line passing through these average points. Since there were far fewer outliers than valid points, this computed line closely approximated the desired final line. We used it as a reference to filter out the outliers: pixels with a horizontal distance from this line exceeding eight times the average distance of all points to the line were identified and removed as outliers. The output of this step is shown in figure below.
+![Final Contour Output](assetts/shape_10.png)
 
-The remaining edges were identified using the contour-following algorithm. Before continuing, we will explain this algorithm in detail.
+---
 
+## Femur Contour Extraction Using Neural Network
+For this task, we used a U-Net model, trained on 583 labeled images (90% for training, 10% for testing). Labels were created using Photoshop, and broken bones were excluded as our goal was to analyze healthy bone structures for finite element analysis.
 
+The network achieved an accuracy of 99.73% after 100 epochs, evaluated using the `bce_dice_loss` metric. The mask output was applied to original images with OpenCV.
 
-![shape_7](assetts/shape_7.png)
+![Neural Network Output](assetts/shape_11.png)
 
+---
 
-
-**Contour Following:**
-
-The goal of this algorithm is to start with a pixel on the boundary between two regions in an image and then trace that boundary by sequentially selecting other pixels along it.
-
-On the right edge of the femur, given that pixel brightness decreases from high to low near the boundary, we expect to encounter this pattern around the point on the bone’s edge (illustrated as a green pixel in a schematic image).
-
-
-
-![shape_5](assetts/shape_5.png)
-![shape_6](assetts/shape_6.png)
-
-
-
-
-In the row adjacent and above the target pixel, the pixel brightness decreases from high to low.
-
-In the contour-following algorithm, to move upward along a vertical (or nearly vertical) edge, we start with a point that we know lies on the edge (the green pixel). In the row directly above this point, we examine a specified number of pixels (specifically, 7 pixels), collectively referred to as the "filter." Among these, the pixel with the greatest brightness difference from its left neighbor is chosen as the next edge point. This selected pixel becomes the new starting point, and we repeat the previous step.
-
-By continuing this algorithm, we can progressively identify the points along the edge.
-
-For movement in other directions, different filters oriented in those directions can be applied.
-
-
-
-
-![shape_8](assetts/shape_8.png)
-
-
-
-To complete the left and right edges of the femur shaft, a zero-degree filter was applied. For the upper edge of the femur, a vertical filter directed to the right was used. 
-
-To find the starting point for the algorithm on the upper edge, we selected a rectangular region adjacent to the femoral head area. The height of this region was 40 pixels less than the femoral head region, while its width was set to 20 pixels.
-
-
-
-
-![shape_9](assetts/shape_9.png)
-
-
-
-In each column of this region, from left to right, we selected the point with the greatest brightness difference compared to the pixel immediately below it. This allowed us to identify the points in each column that we were confident lay on the femur boundary. This approach is similar to what we initially intended for identifying the femur shaft. However, at that stage, the algorithm failed and generated a lot of noise. In the upper edge of the femur, however, we did not encounter issues with scattered points due to the smaller size of the region and its relatively less cluttered nature.
-
-When applying contour following to the upper edge, we introduced an update to the algorithm. Since the femur boundary follows an uneven path, it wouldn't be logical to apply a single filter to the entire path. Therefore, at each step, we applied both a zero-degree filter and a horizontal filter directed to the right (as shown in figure below) and selected the filter that showed the greatest intensity difference.
-
-The contour-following algorithm also includes an option to define a stopping point. For detecting the left edge, the algorithm continues until the row of the selected point reaches the bottom edge of the femoral head region. Once this happens, contour-following is applied again until the perimeter of the femoral head circle is reached. This division was made because manually verifying the perimeter of the circle is computationally expensive, while checking the bottom edge of the femoral head region is much simpler. Therefore, we used the easier condition until we reached the vicinity of the circle’s perimeter (the bottom edge of the femoral head region), and then applied the more complex, primary condition to find the remaining few points.
-
-For detecting the right edge of the femur, the algorithm continues until it reaches a row one-third of the way from the bottom of the femoral head region. For the upper edge, the algorithm continues until it reaches the last point detected on the right edge of the femur. The output of this method is visible in the figure.
-
-
-
-![shape_10](assetts/shape_10.png)
-
-
-
-**Femur Contour Extraction Using Neural Network:**
-
-For this task, the U-Net model was used again. A total of 583 labeled images were used. 90% of these images were allocated for training, and 10% for evaluating the network's performance. Labeling was done using the quick selection tool in Photoshop.
-
-During the labeling phase, broken bones were excluded from the dataset. This decision was made because the goal of this project was to apply finite element analysis and investigate the potential for healthy bone fractures, to timely replace weak bones with prosthetics. Therefore, broken bones were not relevant to this project.
-
-The labels were provided in TIFF format, and the images were in PNG format. A batch size of 4 was used. The network training was conducted on Google Colab, utilizing the graphics processor provided by Google. After 100 epochs, the network’s accuracy on the test data reached 99.73%. This accuracy was calculated using the **bce_dice_loss** metric, which is the standard for evaluating accuracy in segmentation tasks. The network’s output is a mask, which is applied to the original image using the bitwise function from the OpenCV library to obtain the desired result.
-
-
-
-
-![shape_11](assetts/shape_11.png)
-
-
-
-
-It is worth mentioning that in both methods used for contour extraction (the classical method and the neural network), only the femoral contour on the right side of the image was obtained (depending on the patient's positioning, this femur could correspond to either the right or left leg). To obtain the contour of the other femur, we simply mirror the image so that the left femur appears as a right femur. After processing, the extracted contour is mirrored again to obtain the left femoral contour in the expected orientation. 
-
-The reason for this is that, in the classical method, extracting the contour for the left femur would have required mirroring all steps of the algorithm for that side. Similarly, in the neural network approach, extracting the left femoral contour would have required labeling all the images again. By performing a simple mirroring, we reduced both the computational workload and the labeling effort by half.
+## Note on Contour Extraction
+Both methods extracted the contour of only one femur (on the right side of the image). To obtain the other femur's contour, we mirrored the images, reducing both computational and labeling effort by half.
