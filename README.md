@@ -4,8 +4,6 @@ Final Project of Bachelor of Engineering at K.N.Toosi University of Technology.
 The objective of this project was to segment the femur bone from radiographic images. Initially, there was insufficient data available to employ machine learning techniques. Consequently, we endeavored to design an algorithm to detect the femur bone's edges within its entire surrounding environment using only a few sample images. Subsequently, we gained access to a larger dataset and proceeded to train a machine learning model.
 
 
-SHAPE 0
-
 
 **Classic Method**
 
@@ -20,7 +18,7 @@ The U-Net model used in this step resized the images to 512x512 pixels, which di
 
 
 
-SHAPE 1
+![shape_1](assetts/shape_1.png)
 
 
 Using the Hough Transform, we isolated the femoral head circle. The parameters for the Hough Transform were set as follows:
@@ -32,7 +30,7 @@ Using the Hough Transform, we isolated the femoral head circle. The parameters f
 The minimum radius for circle detection was set to one-third of the number of columns in the femoral head region, and the maximum radius was set to two-thirds of the number of columns in this region.
 
 
-SHAPE 2
+![shape_2](assetts/shape_2.png)
 
 
 In the next step, we aimed to identify the edge points of the femur shaft. It seemed feasible to locate the left edge by selecting a point in each row that had the maximum intensity difference with the pixel directly to its left (similarly, to locate the right edge, we could select the point with the greatest intensity difference compared to the pixel to its right). However, this approach sometimes yielded undesirable points in certain rows.
@@ -40,8 +38,7 @@ In the next step, we aimed to identify the edge points of the femur shaft. It se
 To address this, we refined the edge detection method: for the left edge of the shaft, in every tenth row, we initially selected the four pixels with the highest positive intensity difference compared to their neighboring left pixels (brighter than the pixel on their left). Similarly, for the right edge, in every tenth row, we selected the four pixels with the highest negative intensity difference with their left neighbors (darker than the pixel on their left).
 
 
-SHAPE 3
-
+![shape_3](assetts/shape_3.png)
 
 
 To select the optimal point in each row, we defined an error function.
@@ -52,7 +49,7 @@ Despite these selections, some undesired points remained among the detected poin
 
 
 
-SHAPE 4
+![shape_4](assetts/shape_4.png)
 
 
 
@@ -62,7 +59,7 @@ The remaining edges were identified using the contour-following algorithm. Befor
 
 
 
-SHAPE 7
+![shape_7](assetts/shape_7.png)
 
 
 
@@ -74,9 +71,8 @@ On the right edge of the femur, given that pixel brightness decreases from high 
 
 
 
-SHAPE 5
-SHAPE 6
-
+![shape_5](assetts/shape_5.png)
+![shape_6](assetts/shape_6.png)
 
 
 
@@ -92,7 +88,7 @@ For movement in other directions, different filters oriented in those directions
 
 
 
-SHAPE 8
+![shape_8](assetts/shape_8.png)
 
 
 
@@ -103,7 +99,7 @@ To find the starting point for the algorithm on the upper edge, we selected a re
 
 
 
-SHAPE 9
+![shape_9](assetts/shape_9.png)
 
 
 
@@ -117,7 +113,7 @@ For detecting the right edge of the femur, the algorithm continues until it reac
 
 
 
-SHAPE 10
+![shape_10](assetts/shape_10.png)
 
 
 
@@ -132,7 +128,7 @@ The labels were provided in TIFF format, and the images were in PNG format. A ba
 
 
 
-SHAPE 11
+![shape_11](assetts/shape_11.png)
 
 
 
