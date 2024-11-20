@@ -1,7 +1,6 @@
 <div align="justify">
 
 # Image_Segmentation_Femur_Bone
-Final Project of Bachelor of Engineering at K.N.Toosi University of Technology.
 
 The objective of this project was to segment the femur bone from radiographic images. Initially, there was insufficient data available to employ machine learning techniques. Consequently, we endeavored to design an algorithm to detect the femur bone's edges within its entire surrounding environment using only a few sample images. Subsequently, we gained access to a larger dataset and proceeded to train a machine learning model.
 
